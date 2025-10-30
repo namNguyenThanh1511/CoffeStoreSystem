@@ -1,0 +1,93 @@
+name: Deploy ASP.NET Core to Windows EC2 via WinRM (IIS Reverse Proxy)
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    name: Build & Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish app
+        run: dotnet publish -c Release -o ./publish
+
+      - name: Archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-app
+          path: ./publish
+
+  deploy:
+    name: Deploy to EC2 Windows (WinRM)
+    runs-on: windows-latest
+    needs: build
+
+    steps:
+      - name: Download published artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: published-app
+          path: ./publish
+
+      - name: Setup PowerShell Remoting (WinRM)
+        shell: powershell
+        run: |
+          Install-Module -Name PSRemotingTools -Force -Scope CurrentUser
+          Install-Module -Name PSSessionRemoting -Force -Scope CurrentUser
+          Write-Host "WinRM client ready."
+
+      - name: Deploy via WinRM
+        shell: powershell
+        env:
+          EC2_HOST: ${{ secrets.EC2_WINDOWS_HOST }}
+          EC2_USER: ${{ secrets.EC2_WINDOWS_USER }}
+          EC2_PASS: ${{ secrets.EC2_WINDOWS_PASS }}
+        run: |
+          Write-Host "=== Connecting to EC2 via WinRM ==="
+          $secpasswd = ConvertTo-SecureString $env:EC2_PASS -AsPlainText -Force
+          $creds = New-Object System.Management.Automation.PSCredential ($env:EC2_USER, $secpasswd)
+          $session = New-PSSession -ComputerName $env:EC2_HOST -Credential $creds -Authentication Basic -UseSSL:$false
+
+          Write-Host "=== Uploading published files ==="
+          Copy-Item -Path "./publish/*" -Destination "C:\deploy\publish" -ToSession $session -Recurse -Force
+
+          Write-Host "=== Deploying on EC2 ==="
+          Invoke-Command -Session $session -ScriptBlock {
+            Write-Host "Deploying backend..."
+
+            if (!(Test-Path "C:\deploy")) { New-Item -ItemType Directory -Force -Path "C:\deploy" | Out-Null }
+            cd C:\deploy
+
+            if (!(Test-Path "docker-compose.yml")) {
+              Write-Host "No docker-compose.yml found, cloning repo..."
+              git clone https://github.com/${{ github.repository }} .
+            } else {
+              git pull origin main
+            }
+
+            Write-Host "Restarting Docker containers..."
+            docker-compose down
+            docker-compose up -d --build
+
+            Write-Host "Current containers:"
+            docker ps
+          }
+
+          Write-Host "=== Deployment completed successfully ==="
+          Remove-PSSession $session
