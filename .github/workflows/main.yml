@@ -1,4 +1,4 @@
-name: Deploy ASP.NET Core to Windows EC2 via WinRM (IIS Reverse Proxy)
+name: Deploy ASP.NET Core to Windows EC2 via WinRM (AllowUnencrypted)
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
 
 jobs:
   build:
-    name: Build & Publish
+    name: Build & Test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup .NET 8 SDK
@@ -24,6 +24,9 @@ jobs:
       - name: Build solution
         run: dotnet build --configuration Release --no-restore
 
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal
+
       - name: Publish app
         run: dotnet publish -c Release -o ./publish
 
@@ -34,66 +37,58 @@ jobs:
           path: ./publish
 
   deploy:
-    name: Deploy to EC2 Windows (via WinRM)
+    name: Deploy to EC2 Windows Server via WinRM
     runs-on: windows-latest
     needs: build
 
     steps:
-      - name: Download published artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: published-app
           path: ./publish
 
-      - name: Configure WinRM connection
+      - name: Setup WinRM client (allow unencrypted)
+        run: |
+          Set-Item -Path WSMan:\localhost\Client\AllowUnencrypted -Value $true
+          Set-Item -Path WSMan:\localhost\Client\Auth\Basic -Value $true
+          Get-Item WSMan:\localhost\Client\AllowUnencrypted
+          Get-Item WSMan:\localhost\Client\Auth\Basic
         shell: pwsh
+
+      - name: Deploy to EC2
         env:
-          EC2_HOST: ${{ secrets.EC2_WINDOWS_HOST }}
+          EC2_HOST: ${{ secrets.EC2_WINDOWS_IP }}
           EC2_USER: ${{ secrets.EC2_WINDOWS_USER }}
           EC2_PASS: ${{ secrets.EC2_WINDOWS_PASS }}
         run: |
-          Write-Host "=== Setting up WinRM connection ==="
+          Write-Host "=== Setting up WinRM connection to $env:EC2_HOST ==="
+
           $secpasswd = ConvertTo-SecureString $env:EC2_PASS -AsPlainText -Force
-          $creds = New-Object System.Management.Automation.PSCredential ($env:EC2_USER, $secpasswd)
+          $cred = New-Object System.Management.Automation.PSCredential ($env:EC2_USER, $secpasswd)
 
-          # Test connection
           Test-WSMan $env:EC2_HOST
-          $session = New-PSSession -ComputerName $env:EC2_HOST -Credential $creds -Authentication Basic -UseSSL:$false
-          Write-Host "WinRM session established."
 
-          # Ensure deploy folder exists
-          Invoke-Command -Session $session -ScriptBlock {
-            if (!(Test-Path "C:\deploy")) { New-Item -ItemType Directory -Path "C:\deploy" | Out-Null }
-            Write-Host "Deploy folder ready at C:\deploy"
-          }
+          $session = New-PSSession -ComputerName $env:EC2_HOST -Credential $cred -Authentication Basic
 
-          # Copy published app
-          Write-Host "=== Uploading published app ==="
+          Write-Host "=== Copying published files to EC2 ==="
           Copy-Item -Path "./publish/*" -Destination "C:\deploy\publish" -Recurse -ToSession $session -Force
 
-          # Deploy on EC2
-          Write-Host "=== Deploying on EC2 ==="
+          Write-Host "=== Running deploy commands remotely ==="
           Invoke-Command -Session $session -ScriptBlock {
-            Write-Host "=== Running deployment on EC2 ==="
             cd C:\deploy
-
-            if (!(Test-Path "docker-compose.yml")) {
-              Write-Host "docker-compose.yml not found, cloning repo..."
-              git clone https://github.com/${{ github.repository }} .
-            } else {
-              git pull origin main
-            }
-
-            Write-Host "=== Restarting Docker containers ==="
+            Write-Host "Stopping old containers..."
             docker-compose down
+
+            Write-Host "Starting new containers..."
             docker-compose up -d --build
 
-            Write-Host "=== Verifying Docker containers ==="
+            Write-Host "=== Running containers ==="
             docker ps
-
-            Write-Host "=== Restarting IIS for reverse proxy ==="
-            iisreset
           }
 
-          Write-Host "=== Deployment completed successfully ==="
           Remove-PSSession $session
+        shell: pwsh
+
+      - name: Deployment finished
+        run: echo "✅ Deployment completed successfully!"
