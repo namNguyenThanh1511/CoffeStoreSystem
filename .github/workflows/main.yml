@@ -64,11 +64,21 @@ jobs:
         run: |
           Write-Host "=== Setting up WinRM connection to $env:EC2_HOST ==="
 
+           # Cho phép kết nối HTTP không mã hóa và Basic auth
+          Set-Item -Path WSMan:\localhost\Client\AllowUnencrypted -Value $true
+          Set-Item -Path WSMan:\localhost\Client\Auth\Basic -Value $true
+
+           # Tin tưởng tất cả host (hoặc chỉ host cụ thể)
+          Set-Item WSMan:\localhost\Client\TrustedHosts -Value '*' -Force
+
+          # Tạo credential
           $secpasswd = ConvertTo-SecureString $env:EC2_PASS -AsPlainText -Force
           $cred = New-Object System.Management.Automation.PSCredential ($env:EC2_USER, $secpasswd)
 
+          # Kiểm tra kết nối
           Test-WSMan $env:EC2_HOST
 
+          # Mở session WinRM
           $session = New-PSSession -ComputerName $env:EC2_HOST -Credential $cred -Authentication Basic
 
           Write-Host "=== Copying published files to EC2 ==="
