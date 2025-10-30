@@ -27,14 +27,14 @@ jobs:
       - name: Publish app
         run: dotnet publish -c Release -o ./publish
 
-      - name: Archive artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: published-app
           path: ./publish
 
   deploy:
-    name: Deploy to EC2 Windows (WinRM)
+    name: Deploy to EC2 Windows (via WinRM)
     runs-on: windows-latest
     needs: build
 
@@ -45,48 +45,54 @@ jobs:
           name: published-app
           path: ./publish
 
-      - name: Setup PowerShell Remoting (WinRM)
-        shell: powershell
-        run: |
-          Install-Module -Name PSRemotingTools -Force -Scope CurrentUser
-          Install-Module -Name PSSessionRemoting -Force -Scope CurrentUser
-          Write-Host "WinRM client ready."
-
-      - name: Deploy via WinRM
-        shell: powershell
+      - name: Configure WinRM connection
+        shell: pwsh
         env:
           EC2_HOST: ${{ secrets.EC2_WINDOWS_HOST }}
           EC2_USER: ${{ secrets.EC2_WINDOWS_USER }}
           EC2_PASS: ${{ secrets.EC2_WINDOWS_PASS }}
         run: |
-          Write-Host "=== Connecting to EC2 via WinRM ==="
+          Write-Host "=== Setting up WinRM connection ==="
           $secpasswd = ConvertTo-SecureString $env:EC2_PASS -AsPlainText -Force
           $creds = New-Object System.Management.Automation.PSCredential ($env:EC2_USER, $secpasswd)
+
+          # Test connection
+          Test-WSMan $env:EC2_HOST
           $session = New-PSSession -ComputerName $env:EC2_HOST -Credential $creds -Authentication Basic -UseSSL:$false
+          Write-Host "WinRM session established."
 
-          Write-Host "=== Uploading published files ==="
-          Copy-Item -Path "./publish/*" -Destination "C:\deploy\publish" -ToSession $session -Recurse -Force
+          # Ensure deploy folder exists
+          Invoke-Command -Session $session -ScriptBlock {
+            if (!(Test-Path "C:\deploy")) { New-Item -ItemType Directory -Path "C:\deploy" | Out-Null }
+            Write-Host "Deploy folder ready at C:\deploy"
+          }
 
+          # Copy published app
+          Write-Host "=== Uploading published app ==="
+          Copy-Item -Path "./publish/*" -Destination "C:\deploy\publish" -Recurse -ToSession $session -Force
+
+          # Deploy on EC2
           Write-Host "=== Deploying on EC2 ==="
           Invoke-Command -Session $session -ScriptBlock {
-            Write-Host "Deploying backend..."
-
-            if (!(Test-Path "C:\deploy")) { New-Item -ItemType Directory -Force -Path "C:\deploy" | Out-Null }
+            Write-Host "=== Running deployment on EC2 ==="
             cd C:\deploy
 
             if (!(Test-Path "docker-compose.yml")) {
-              Write-Host "No docker-compose.yml found, cloning repo..."
+              Write-Host "docker-compose.yml not found, cloning repo..."
               git clone https://github.com/${{ github.repository }} .
             } else {
               git pull origin main
             }
 
-            Write-Host "Restarting Docker containers..."
+            Write-Host "=== Restarting Docker containers ==="
             docker-compose down
             docker-compose up -d --build
 
-            Write-Host "Current containers:"
+            Write-Host "=== Verifying Docker containers ==="
             docker ps
+
+            Write-Host "=== Restarting IIS for reverse proxy ==="
+            iisreset
           }
 
           Write-Host "=== Deployment completed successfully ==="
