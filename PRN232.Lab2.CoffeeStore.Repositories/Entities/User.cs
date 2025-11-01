@@ -14,15 +14,13 @@
         public string? RefreshToken { get; set; }
         public bool IsRefreshTokenRevoked { get; set; } = false;
         public DateTime? RefreshTokenExpiryTime { get; set; }
-
-
         public ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 
     public enum Role
     {
-        Admin,
-        Staff,
-        Customer
+        Customer = 0,
+        Admin = 1,
+        Barista = 2,
     }
 }

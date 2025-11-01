@@ -9,6 +9,8 @@
         public decimal Amount { get; set; }
         public long OrderId { get; set; }
         public Order Order { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt {get; set;} = DateTime.UtcNow;
     }
 
     public enum PaymentMethod
@@ -16,11 +18,12 @@
         Cash,
         OnlineBanking,
     }
-
-    public enum PaymentStatus
+    public enum PaymentTransactionType
     {
-        Pending,
-        Completed,
-        Failed,
+        PENDING,
+        SUCCESS,
+        FAILED,
     }
+
+
 }

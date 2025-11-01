@@ -5,25 +5,18 @@
 namespace PRN232.Lab2.CoffeeStore.Repositories.Migrations
 {
     /// <inheritdoc />
-    public partial class fixlogout : Migration
+    public partial class changerole : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsRefreshTokenRevoked",
-                table: "Users",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
+
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "IsRefreshTokenRevoked",
-                table: "Users");
+
         }
     }
 }

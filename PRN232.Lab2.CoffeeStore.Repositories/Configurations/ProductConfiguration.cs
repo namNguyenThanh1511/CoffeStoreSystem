@@ -14,20 +14,14 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Configurations
             builder.Property(p => p.Name)
                 .IsRequired()
                 .HasMaxLength(200);
-            builder.Property(p => p.Price)
-                .IsRequired()
-                .HasColumnType("decimal(18,2)");
             builder.Property(p => p.Description)
                 .HasMaxLength(1000);
-            builder.Property(p => p.CategoryId);
-            builder.HasOne(p => p.Category)
-                .WithMany(p => p.Products)
-                .HasForeignKey(p => p.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
-            builder.HasMany(p => p.ProductInMenus)
-                .WithOne(pm => pm.Product)
-                .HasForeignKey(pm => pm.ProductId)
-                .OnDelete(DeleteBehavior.SetNull);
+            builder.Property(p => p.RoastLevel).HasConversion<string>();
+            builder.Property(p => p.BrewMethod).HasConversion<string>();
+            builder.HasMany(p => p.Variants)
+                .WithOne(v => v.Product)
+                .HasForeignKey(v => v.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);// Nếu Product bị xóa, xóa tất cả Variants liên quan
         }
     }
 }

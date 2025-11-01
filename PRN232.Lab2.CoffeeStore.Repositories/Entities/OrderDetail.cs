@@ -8,10 +8,36 @@
         //N - 1 , 1 order has many order details , 1 order detail belongs to 1 order
         public Order Order { get; set; }
         //FK
-        public Guid ProductId { get; set; }
-        //N - 1 , 1 product has many order details , 1 order detail belongs to 1 product
-        public Product Product { get; set; }
+        public Guid VariantId { get; set; }
+        //N - 1 , 1 variant has many order details , 1 order detail belongs to 1 variant
+        public CoffeeVariant Variant { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public string? Notes { get; set; }
+
+        public Temperature Temperature { get; set; }
+        public Sweetness Sweetness { get; set; }
+        public MilkType MilkType { get; set; }
+
+
+    }
+    public enum Temperature
+    {
+        Hot,
+        ColdBrew,
+        Ice
+    }
+    public enum Sweetness
+    {
+        Sweet,
+        Normal,
+        Less,
+        NoSugar
+    }
+    public enum MilkType{
+        Dairy,
+        Condensed,
+        Plant,
+        None
     }
 }

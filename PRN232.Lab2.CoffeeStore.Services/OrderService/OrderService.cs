@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PRN232.Lab2.CoffeeStore.Repositories;
+﻿using PRN232.Lab2.CoffeeStore.Repositories;
 using PRN232.Lab2.CoffeeStore.Repositories.Entities;
 using PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork;
 using PRN232.Lab2.CoffeeStore.Services.Exceptions;
@@ -65,9 +64,9 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
 
 
             // Include navigation properties before passing to repository
-            query = query.Include(o => o.OrderItems)
-                         .ThenInclude(oi => oi.Product)
-                         .Include(o => o.Customer);
+            //query = query.Include(o => o.OrderItems)
+            //             .ThenInclude(oi => oi.Product)
+            //             .Include(o => o.Customer);
 
             // Use repository for paging
             var pagedOrders = await _unitOfWork.Orders.GetAllOrders(query, searchParams.PageNumber, searchParams.PageSize);
@@ -92,8 +91,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     response.OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
                     {
                         Id = oi.Id,
-                        ProductId = oi.ProductId,
-                        ProductName = oi.Product?.Name ?? "",
+                        //ProductId = oi.ProductId,
+                        //ProductName = oi.Product?.Name ?? "",
                         Quantity = oi.Quantity,
                         UnitPrice = oi.UnitPrice
                     }).ToList();
@@ -121,8 +120,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                                 response.OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
                                 {
                                     Id = oi.Id,
-                                    ProductId = oi.ProductId,
-                                    ProductName = oi.Product?.Name ?? "",
+                                    //ProductId = oi.ProductId,
+                                    //ProductName = oi.Product?.Name ?? "",
                                     Quantity = oi.Quantity,
                                     UnitPrice = oi.UnitPrice
                                 }).ToList();
@@ -161,7 +160,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                 {
                     CustomerId = Guid.Parse(userId),
                     OrderDate = DateTime.UtcNow,
-                    Status = OrderStatus.Pending,
+                    Status = OrderStatus.PROCESSING,
                 };
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();  // Save để có order.Id
@@ -177,19 +176,19 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                 var orderItems = request.OrderItems.Select(itemReq =>  // Rename để rõ
                 {
                     var product = products.First(p => p.Id == itemReq.ProductId);
-                    if (itemReq.Quantity > product.Stock)
-                    {
-                        throw new InvalidOperationException($"Insufficient stock for product {product.Name}. Available: {product.Stock}, Requested: {itemReq.Quantity}");
-                    }
-                    product.Stock -= itemReq.Quantity;
+                    //if (itemReq.Quantity > product.Stock)
+                    //{
+                    //    throw new InvalidOperationException($"Insufficient stock for product {product.Name}. Available: {product.Stock}, Requested: {itemReq.Quantity}");
+                    //}
+                    //product.Stock -= itemReq.Quantity;
                     _unitOfWork.Products.Update(product);
 
                     var orderItem = new OrderDetail
                     {
                         OrderId = order.Id,
-                        ProductId = product.Id,
+                        //ProductId = product.Id,
                         Quantity = itemReq.Quantity,
-                        UnitPrice = product.Price
+                        //UnitPrice = product.Price
                     };
                     return orderItem;
                 }).ToList();
@@ -211,7 +210,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
                     {
                         Id = oi.Id,
-                        ProductId = oi.ProductId,
+                        //ProductId = oi.ProductId,
                         Quantity = oi.Quantity,
                         UnitPrice = oi.UnitPrice
                     }).ToList()
@@ -230,7 +229,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             try
             {
                 await _unitOfWork.BeginTransaction();
-                order.Status = OrderStatus.Completed;
+                order.Status = OrderStatus.COMPLETED;
                 _unitOfWork.Orders.Update(order);
                 var payment = new Payment
                 {
@@ -238,7 +237,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     PaymentDate = DateTime.UtcNow,
                     Amount = order.TotalAmount,
                     Method = PaymentMethod.OnlineBanking,
-                    Status = PaymentStatus.Completed
+                    Status = PaymentStatus.PAID
                 };
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();

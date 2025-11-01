@@ -4,18 +4,28 @@
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
-        public decimal Price { get; set; }
         public string? Description { get; set; }
+        public string? Origin {get; set;}
+        public RoastLevel RoastLevel {get; set;}
+        public BrewMethod BrewMethod {get; set;}
+        public string? ImageUrl {get; set;}
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedDate { get; set; }
-        public int Stock { get; set; }
-        //fk
-        public Guid? CategoryId { get; set; }
-        // Quan hệ N - 1
-        public Category Category { get; set; }
-        // Quan hệ N - N với Menu thông qua ProductInMenu
-        public ICollection<ProductInMenu> ProductInMenus { get; set; } = new List<ProductInMenu>();
-        // Quan hệ 1 - N với OrderDetail
-        public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt {get; set;} = DateTime.UtcNow;
+
+        //1 - N
+        public ICollection<CoffeeVariant> Variants { get; set; } = new List<CoffeeVariant>();
+    }
+
+    public enum RoastLevel{
+        Light,
+        Medium,
+        Dark
+    }
+    public enum BrewMethod{
+        Espresso,
+        Phin,
+        PourOver,
+        ColdBrew,
     }
 }

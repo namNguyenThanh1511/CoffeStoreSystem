@@ -26,7 +26,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.PaymentService
 
             // Prepare item list for PayOS  
             var items = order.OrderItems.Select(oi => new ItemData(
-                          name: oi.Product?.Name ?? "Unknown",  // Hoặc bỏ named arguments nếu không cần
+                          name: oi.Variant?.Product.Name ?? "Unknown",  // Hoặc bỏ named arguments nếu không cần
                           quantity: oi.Quantity,
                           price: (int)oi.UnitPrice
                       )).ToList();
@@ -67,7 +67,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.PaymentService
         {
             // Prepare item list for PayOS  
             var items = order.OrderItems.Select(oi => new ItemData(
-                          name: oi.Product?.Name ?? "Unknown",  // Hoặc bỏ named arguments nếu không cần
+                          name: oi.Variant?.Product.Name ?? "Unknown",  // Hoặc bỏ named arguments nếu không cần
                           quantity: oi.Quantity,
                           price: (int)oi.UnitPrice
                       )).ToList();

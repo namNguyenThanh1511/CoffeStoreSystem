@@ -30,8 +30,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.MenuServices
             var menu = new Menu
             {
                 Name = request.Name,
-                FromDate = request.FromDate ?? DateTime.Now,
-                ToDate = request.ToDate ?? DateTime.Now,
+                FromDate = request.FromDate ?? DateTime.UtcNow,
+                ToDate = request.ToDate ?? DateTime.UtcNow,
             };
 
             menu = await _unitOfWork.Menus.AddAsync(menu);
@@ -98,8 +98,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.MenuServices
                         Name = pm.Product?.Name ?? "",
                         Description = pm.Product?.Description,
                         Quantity = pm.Quantity,
-                        Price = pm.Product?.Price,
-                        Category = pm.Product?.Category.Name
+                        // Price = pm.Product?.Price,
+                        // Category = pm.Product?.Category.Name
                     }).ToList() ?? new List<ProductInMenuResponse>()
             };
         }

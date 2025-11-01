@@ -15,10 +15,6 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Configurations
             builder.Property(pm => pm.MenuId);
             builder.Property(pm => pm.Quantity)
                 .IsRequired();
-            builder.HasOne(pm => pm.Product)
-                .WithMany(pm => pm.ProductInMenus)
-                .HasForeignKey(pm => pm.ProductId)
-                .OnDelete(DeleteBehavior.SetNull);
             builder.HasOne(pm => pm.Menu)
                 .WithMany(m => m.ProductInMenus)
                 .HasForeignKey(pm => pm.MenuId)

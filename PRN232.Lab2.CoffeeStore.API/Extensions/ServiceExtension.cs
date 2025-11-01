@@ -128,10 +128,12 @@ namespace PRN232.Lab2.CoffeeStore.API.Extensions
             services.AddProblemDetails();
             services.AddExceptionHandler<GlobalExceptionMiddleware>();
         }
-
-
-
-
-
+        public async static void Seed(this IApplicationBuilder builder)
+        {
+            using (var scope = builder.ApplicationServices.CreateScope())
+            {
+                await DbInitializer.SeedAsync(scope.ServiceProvider);
+            }
+        }
     }
 }

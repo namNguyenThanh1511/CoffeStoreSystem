@@ -91,6 +91,7 @@ namespace PRN232.Lab2.CoffeeStore.API
                 }
             }
 
+            app.Seed();
             app.UseSwagger();
             app.UseSwaggerUI();
 
