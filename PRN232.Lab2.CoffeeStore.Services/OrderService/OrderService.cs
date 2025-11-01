@@ -3,7 +3,9 @@ using PRN232.Lab2.CoffeeStore.Repositories;
 using PRN232.Lab2.CoffeeStore.Repositories.Entities;
 using PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork;
 using PRN232.Lab2.CoffeeStore.Services.Exceptions;
+using PRN232.Lab2.CoffeeStore.Services.Models;
 using PRN232.Lab2.CoffeeStore.Services.Models.Order;
+using PRN232.Lab2.CoffeeStore.Services.Models.Product;
 using PRN232.Lab2.CoffeeStore.Services.PaymentService;
 using PRN232.Lab2.CoffeeStore.Services.UserService;
 
@@ -68,9 +70,13 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
 
 
             // Include navigation properties before passing to repository
-            //query = query.Include(o => o.OrderItems)
-            //             .ThenInclude(oi => oi.Product)
-            //             .Include(o => o.Customer);
+            query = query.Include(o => o.OrderItems)
+                         .ThenInclude(oi => oi.Variant)
+                            .ThenInclude(v => v.Product)
+                         .Include(o => o.Customer);
+            query = query.Include(o => o.OrderItems)
+                         .ThenInclude(oi => oi.OrderItemAddons)
+                         .ThenInclude(oia => oia.Addon);
 
             // Use repository for paging
             var pagedOrders = await _unitOfWork.Orders.GetAllOrders(query, searchParams.PageNumber, searchParams.PageSize);
@@ -95,10 +101,26 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     response.OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
                     {
                         Id = oi.Id,
-                        //ProductId = oi.ProductId,
-                        //ProductName = oi.Product?.Name ?? "",
+                        ProductsWithVariant = oi.Variant?.Product != null ? new ProductWithVariantResponse
+                        {
+                            ProductId = oi.Variant.Product.Id,
+                            ProductName = oi.Variant.Product.Name,
+                            VariantId = oi.Variant.Id,
+                            VariantSize = oi.Variant.Size.ToString(),
+                            BasePrice = oi.Variant.BasePrice
+                        } : null,
                         Quantity = oi.Quantity,
-                        UnitPrice = oi.UnitPrice
+                        UnitPrice = oi.UnitPrice,
+                        Notes = oi.Notes,
+                        Temperature = oi.Temperature.ToString(),
+                        Sweetness = oi.Sweetness.ToString(),
+                        MilkType = oi.MilkType.ToString(),
+                        Addons = oi.OrderItemAddons?.Select(oia => new CoffeeAddonResponse
+                        {
+                            Id = oia.AddonId,
+                            Name = oia.Addon != null ? oia.Addon.Name : "",
+                            Price = oia.Price
+                        }).ToList() ?? new List<CoffeeAddonResponse>()
                     }).ToList();
                 }
                 else
@@ -140,6 +162,161 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             return (result.ToList(), pagedOrders.MetaData);
         }
 
+        public async Task<(List<OrderPlacingResponse>, MetaData metaData)> GetOrdersByCurrentUser(OrderSearchParams searchParams)
+        {
+            (string userId, string role) = _currentUserService.GetCurrentUser();
+
+            // Check role is Customer
+            if (role != Role.Customer.ToString())
+            {
+                throw new UnauthorizedAccessException("Only customers can access their own orders.");
+            }
+
+            var customerId = Guid.Parse(userId);
+            var query = _unitOfWork.Orders.Query();
+
+            // Filter by current user's CustomerId
+            query = query.Where(o => o.CustomerId == customerId);
+
+            // Filtering by search term
+            if (!string.IsNullOrWhiteSpace(searchParams.Search))
+            {
+                query = query.Where(o =>
+                    o.Status.ToString().Contains(searchParams.Search) ||
+                    o.OrderCode.ToString().Contains(searchParams.Search) ||
+                    (o.Customer != null && o.Customer.FullName.Contains(searchParams.Search))
+                );
+            }
+
+            // Sorting
+            string sortBy = string.IsNullOrWhiteSpace(searchParams.SortBy) ? "OrderDate" : searchParams.SortBy;
+            string sortOrder = string.IsNullOrWhiteSpace(searchParams.SortOrder) ? "desc" : searchParams.SortOrder.ToLower();
+
+            switch (sortBy.ToLower())
+            {
+                case "orderdate":
+                    query = sortOrder == "asc" ? query.OrderBy(o => o.OrderDate) : query.OrderByDescending(o => o.OrderDate);
+                    break;
+                case "totalamount":
+                    query = sortOrder == "asc" ? query.OrderBy(o => o.TotalAmount) : query.OrderByDescending(o => o.TotalAmount);
+                    break;
+                case "status":
+                    query = sortOrder == "asc" ? query.OrderBy(o => o.Status) : query.OrderByDescending(o => o.Status);
+                    break;
+                default:
+                    query = sortOrder == "asc" ? query.OrderBy(o => o.OrderDate) : query.OrderByDescending(o => o.OrderDate);
+                    break;
+            }
+
+            // Include navigation properties before passing to repository
+            query = query.Include(o => o.OrderItems)
+                         .ThenInclude(oi => oi.Variant)
+                            .ThenInclude(v => v.Product)
+                         .Include(o => o.Customer);
+            query = query.Include(o => o.OrderItems)
+                         .ThenInclude(oi => oi.OrderItemAddons)
+                         .ThenInclude(oia => oia.Addon);
+
+            // Use repository for paging
+            var pagedOrders = await _unitOfWork.Orders.GetAllOrders(query, searchParams.PageNumber, searchParams.PageSize);
+
+            // Select only requested fields
+            var selectFields = searchParams.SelectFields;
+
+            var result = pagedOrders.Select(order =>
+            {
+                var response = new OrderPlacingResponse
+                {
+                    Id = order.Id
+                };
+
+                // If no select fields specified, populate all fields
+                if (selectFields == null || selectFields.Count == 0)
+                {
+                    response.OrderDate = order.OrderDate;
+                    response.Status = order.Status.ToString();
+                    response.TotalAmount = order.TotalAmount;
+                    response.CustomerId = order.CustomerId ?? Guid.Empty;
+                    response.OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
+                    {
+                        Id = oi.Id,
+                        ProductsWithVariant = oi.Variant?.Product != null ? new ProductWithVariantResponse
+                        {
+                            ProductId = oi.Variant.Product.Id,
+                            ProductName = oi.Variant.Product.Name,
+                            VariantId = oi.Variant.Id,
+                            VariantSize = oi.Variant.Size.ToString(),
+                            BasePrice = oi.Variant.BasePrice
+                        } : null,
+                        Quantity = oi.Quantity,
+                        UnitPrice = oi.UnitPrice,
+                        Notes = oi.Notes,
+                        Temperature = oi.Temperature.ToString(),
+                        Sweetness = oi.Sweetness.ToString(),
+                        MilkType = oi.MilkType.ToString(),
+                        Addons = oi.OrderItemAddons?.Select(oia => new CoffeeAddonResponse
+                        {
+                            Id = oia.AddonId,
+                            Name = oia.Addon != null ? oia.Addon.Name : "",
+                            Price = oia.Price
+                        }).ToList() ?? new List<CoffeeAddonResponse>()
+                    }).ToList();
+                }
+                else
+                {
+                    // Always include Id, populate only selected fields
+                    foreach (var field in selectFields)
+                    {
+                        switch (field)
+                        {
+                            case OrderSearchParams.OrderSelectField.OrderDate:
+                                response.OrderDate = order.OrderDate ?? null;
+                                break;
+                            case OrderSearchParams.OrderSelectField.Status:
+                                response.Status = order.Status.ToString();
+                                break;
+                            case OrderSearchParams.OrderSelectField.TotalAmount:
+                                response.TotalAmount = order.TotalAmount;
+                                break;
+                            case OrderSearchParams.OrderSelectField.Customer:
+                                response.CustomerId = order.CustomerId ?? null;
+                                break;
+                            case OrderSearchParams.OrderSelectField.OrderItems:
+                                response.OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
+                                {
+                                    Id = oi.Id,
+                                    ProductsWithVariant = oi.Variant?.Product != null ? new ProductWithVariantResponse
+                                    {
+                                        ProductId = oi.Variant.Product.Id,
+                                        ProductName = oi.Variant.Product.Name,
+                                        VariantId = oi.Variant.Id,
+                                        VariantSize = oi.Variant.Size.ToString(),
+                                        BasePrice = oi.Variant.BasePrice
+                                    } : null,
+                                    Quantity = oi.Quantity,
+                                    UnitPrice = oi.UnitPrice,
+                                    Notes = oi.Notes,
+                                    Temperature = oi.Temperature.ToString(),
+                                    Sweetness = oi.Sweetness.ToString(),
+                                    MilkType = oi.MilkType.ToString(),
+                                    Addons = oi.OrderItemAddons?.Select(oia => new CoffeeAddonResponse
+                                    {
+                                        Id = oia.AddonId,
+                                        Name = oia.Addon != null ? oia.Addon.Name : "",
+                                        Price = oia.Price
+                                    }).ToList() ?? new List<CoffeeAddonResponse>()
+                                }).ToList();
+                                break;
+                        }
+                    }
+                }
+
+                return response;
+            });
+
+            return (result.ToList(), pagedOrders.MetaData);
+        }
+
         public async Task<(OrderPlacingResponse order, string paymentUrl)> PlaceOrder(OrderPlacingRequest request)
         {
             (string userId, string role) = _currentUserService.GetCurrentUser();
@@ -158,11 +335,13 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             {
                 await _unitOfWork.BeginTransaction();
 
+
                 var order = new Order
                 {
                     CustomerId = Guid.Parse(userId),
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.PROCESSING,
+                    OrderCode = long.Parse(DateTime.UtcNow.ToString("yyyyMMddHHmmss"))
                 };
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();  // Save để có order.Id
@@ -261,11 +440,30 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     Status = order.Status.ToString(),
                     TotalAmount = order.TotalAmount,
                     CustomerId = order.CustomerId ?? Guid.Empty,
+
                     OrderItems = orderWithDetails.OrderItems.Select(oi => new OrderItemResponse
                     {
                         Id = oi.Id,
+                        ProductsWithVariant = oi.Variant?.Product != null ? new ProductWithVariantResponse
+                        {
+                            ProductId = oi.Variant.Product.Id,
+                            ProductName = oi.Variant.Product.Name,
+                            VariantId = oi.Variant.Id,
+                            VariantSize = oi.Variant.Size.ToString(),
+                            BasePrice = oi.Variant.BasePrice
+                        } : null,
                         Quantity = oi.Quantity,
-                        UnitPrice = oi.UnitPrice
+                        UnitPrice = oi.UnitPrice,
+                        Notes = oi.Notes,
+                        Temperature = oi.Temperature.ToString(),
+                        Sweetness = oi.Sweetness.ToString(),
+                        MilkType = oi.MilkType.ToString(),
+                        Addons = oi.OrderItemAddons?.Select(oia => new CoffeeAddonResponse
+                        {
+                            Id = oia.AddonId,
+                            Name = oia.Addon != null ? oia.Addon.Name : "",
+                            Price = oia.Price
+                        }).ToList() ?? new List<CoffeeAddonResponse>()
                     }).ToList()
                 }, paymentUrl);
             }

@@ -3,6 +3,7 @@
     public class Order
     {
         public long Id { get; set; }
+        public long OrderCode { get; set; }
         public DateTime? OrderDate { get; set; } = DateTime.UtcNow;
         public decimal TotalAmount { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.PROCESSING;
@@ -10,7 +11,6 @@
         public DeliveryType DeliveryType { get; set; } = DeliveryType.PICKUP;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
-
         public ICollection<OrderDetail> OrderItems { get; set; } = new List<OrderDetail>();
         //fk
         public Guid? CustomerId { get; set; }

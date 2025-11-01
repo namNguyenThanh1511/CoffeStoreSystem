@@ -31,18 +31,13 @@ namespace PRN232.Lab2.CoffeeStore.Services.PaymentService
                           price: (int)oi.UnitPrice
                       )).ToList();
 
-            // Convert order.Id to long (cải thiện: dùng Guid.ToString() và parse, hoặc dùng timestamp nếu cần unique)
-            if (!long.TryParse(order.Id.ToString(), out var orderCode))
-            {
-                throw new InvalidOperationException("Order ID is not in a valid format for conversion to long.");
-            }
 
             var returnUrl = _config.GetSection("PayOS:ReturnUrl").Value;
             var cancelUrl = _config.GetSection("PayOS:CancelUrl").Value;
 
             // Prepare payment data for PayOS  
             var paymentData = new PaymentData(
-                orderCode: orderCode,
+                orderCode: order.OrderCode,
                 amount: (int)order.TotalAmount,
                 description: $"Thanh toán đơn hàng #{order.Id}",
                 items: items,
@@ -77,14 +72,14 @@ namespace PRN232.Lab2.CoffeeStore.Services.PaymentService
             //{
             //    throw new InvalidOperationException("Order ID is not in a valid format for conversion to long.");
             //}
-            long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
 
             var returnUrl = _config.GetSection("PayOS:ReturnUrl").Value;
             var cancelUrl = _config.GetSection("PayOS:CancelUrl").Value;
 
             // Prepare payment data for PayOS  
             var paymentData = new PaymentData(
-                orderCode: order.Id,
+                orderCode: order.OrderCode,
                 amount: (int)order.TotalAmount,
                 description: $"PAYORDER",
                 items: items,

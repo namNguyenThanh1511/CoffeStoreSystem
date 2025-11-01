@@ -35,7 +35,8 @@
         Less,
         NoSugar
     }
-    public enum MilkType{
+    public enum MilkType
+    {
         Dairy,
         Condensed,
         Plant,

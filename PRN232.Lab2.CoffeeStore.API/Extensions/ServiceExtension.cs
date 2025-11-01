@@ -4,6 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PRN232.Lab2.CoffeeStore.API.Middleware;
 using PRN232.Lab2.CoffeeStore.Repositories.CategoryRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.CoffeeAddonRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.CoffeeVariantRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.Entities;
 using PRN232.Lab2.CoffeeStore.Repositories.MenuRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderDetailRepository;
@@ -43,6 +45,8 @@ namespace PRN232.Lab2.CoffeeStore.API.Extensions
 
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICoffeeVariantRepository, CoffeeVariantRepository>();
+            services.AddScoped<ICoffeeAddonRepository, CoffeeAddonRepository>();
             services.AddScoped<IMenuRepository, MenuRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IOrderRepository, OrderRepository>();

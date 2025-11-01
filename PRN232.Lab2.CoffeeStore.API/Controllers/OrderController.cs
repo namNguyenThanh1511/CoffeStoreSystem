@@ -18,11 +18,27 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             _paymentService = paymentService;
         }
 
-        [HttpGet]
-        [Authorize]
+        [HttpGet("admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<List<OrderPlacingResponse>>>> GetAllOrders([FromQuery] OrderSearchParams searchParams)
         {
             var (orders, metaData) = await _orderService.GetAllOrders(searchParams);
+            // Add pagination metadata to response header
+            Response.Headers.Append("X-Pagination-CurrentPage", metaData.CurrentPage.ToString());
+            Response.Headers.Append("X-Pagination-TotalPages", metaData.TotalPages.ToString());
+            Response.Headers.Append("X-Pagination-PageSize", metaData.PageSize.ToString());
+            Response.Headers.Append("X-Pagination-TotalCount", metaData.TotalCount.ToString());
+            Response.Headers.Append("X-Pagination-HasPrevious", metaData.HasPrevious.ToString());
+            Response.Headers.Append("X-Pagination-HasNext", metaData.HasNext.ToString());
+
+            return Ok(orders);
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<OrderPlacingResponse>>>> GetAllOrdersByCurrentUser([FromQuery] OrderSearchParams searchParams)
+        {
+            var (orders, metaData) = await _orderService.GetOrdersByCurrentUser(searchParams);
             // Add pagination metadata to response header
             Response.Headers.Append("X-Pagination-CurrentPage", metaData.CurrentPage.ToString());
             Response.Headers.Append("X-Pagination-TotalPages", metaData.TotalPages.ToString());

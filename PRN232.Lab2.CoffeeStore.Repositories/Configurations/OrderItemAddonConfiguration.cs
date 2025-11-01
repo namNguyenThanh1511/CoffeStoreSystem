@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PRN232.Lab2.CoffeeStore.Repositories.Entities;
 
@@ -15,16 +15,17 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Configurations
             builder.Property(oia => oia.Price)
                 .HasColumnType("decimal(10,2)")
                 .IsRequired();
-
+            // ✅ Quan hệ N–1 với OrderDetail (1 OrderDetail có nhiều OrderItemAddons)
             builder.HasOne(oia => oia.OrderDetail)
-                .WithMany()
-                .HasForeignKey(oia => oia.OrderDetailId)
-                .OnDelete(DeleteBehavior.Cascade);
+                   .WithMany(od => od.OrderItemAddons)
+                   .HasForeignKey(oia => oia.OrderDetailId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
+            // ✅ Quan hệ N–1 với CoffeeAddon
             builder.HasOne(oia => oia.Addon)
-                .WithMany()
-                .HasForeignKey(oia => oia.AddonId)
-                .OnDelete(DeleteBehavior.Restrict);
+                   .WithMany()
+                   .HasForeignKey(oia => oia.AddonId)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

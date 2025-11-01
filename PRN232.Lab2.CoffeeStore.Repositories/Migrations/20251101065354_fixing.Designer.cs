@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PRN232.Lab2.CoffeeStore.Repositories;
 
@@ -11,9 +12,11 @@ using PRN232.Lab2.CoffeeStore.Repositories;
 namespace PRN232.Lab2.CoffeeStore.Repositories.Migrations
 {
     [DbContext(typeof(CoffeStoreDbContext))]
-    partial class CoffeStoreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251101065354_fixing")]
+    partial class fixing
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -182,9 +185,6 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long>("OrderCode")
-                        .HasColumnType("bigint");
-
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
@@ -206,7 +206,7 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("PRN232.Lab2.CoffeeStore.Repositories.Entities.OrderDetail", b =>
@@ -307,7 +307,7 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("PRN232.Lab2.CoffeeStore.Repositories.Entities.Product", b =>
@@ -437,7 +437,7 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Migrations
                         .IsUnique()
                         .HasFilter("[PhoneNumber] IS NOT NULL");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("PRN232.Lab2.CoffeeStore.Repositories.Entities.CoffeePriceSchedule", b =>

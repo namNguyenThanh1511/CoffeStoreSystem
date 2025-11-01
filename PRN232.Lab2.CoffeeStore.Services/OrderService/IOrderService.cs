@@ -8,7 +8,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
         Task<(OrderPlacingResponse order, string paymentUrl)> PlaceOrder(OrderPlacingRequest request);
 
         Task<(List<OrderPlacingResponse>, MetaData metaData)> GetAllOrders(OrderSearchParams searchParams);
-
+        Task<(List<OrderPlacingResponse>, MetaData metaData)> GetOrdersByCurrentUser(OrderSearchParams searchParams);
         Task<bool> ProcessPayingOrder(OrderPayingRequest request);
 
     }
