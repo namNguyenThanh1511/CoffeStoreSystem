@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PRN232.Lab2.CoffeeStore.Repositories;
 using PRN232.Lab2.CoffeeStore.Repositories.Entities;
 using PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork;
 using PRN232.Lab2.CoffeeStore.Services.Exceptions;
@@ -16,14 +17,133 @@ namespace PRN232.Lab2.CoffeeStore.Services.ProductServices
         }
 
         // get all products
-        public async Task<List<ProductResponse>> GetAllProductsAsync()
+        public async Task<(List<ProductResponse>, MetaData metaData)> GetAllProductsAsync(ProductSearchParams searchParams)
         {
-            var products = await _unitOfWork.Products.GetAllAsync(
-                q => q
-                    .Where(p => p.IsActive)
-                    .Include(p => p.Variants.Where(v => v.IsActive))
-            );
-            return MapToProductResponseList(products);
+            var query = _unitOfWork.Products.Query();
+
+            // Filtering
+            if (!string.IsNullOrWhiteSpace(searchParams.Search))
+            {
+                query = query.Where(p =>
+                    p.Name.Contains(searchParams.Search) ||
+                    (p.Description != null && p.Description.Contains(searchParams.Search)) ||
+                    (p.Origin != null && p.Origin.Contains(searchParams.Search)) ||
+                    p.RoastLevel.ToString().Contains(searchParams.Search) ||
+                    p.BrewMethod.ToString().Contains(searchParams.Search)
+                );
+            }
+
+            // Filter by IsActive
+            if (searchParams.IsActive.HasValue)
+            {
+                query = query.Where(p => p.IsActive == searchParams.IsActive.Value);
+            }
+
+            // Sorting
+            string sortBy = string.IsNullOrWhiteSpace(searchParams.SortBy) ? "Name" : searchParams.SortBy;
+            string sortOrder = string.IsNullOrWhiteSpace(searchParams.SortOrder) ? "asc" : searchParams.SortOrder.ToLower();
+
+            switch (sortBy.ToLower())
+            {
+                case "name":
+                    query = sortOrder == "asc" ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name);
+                    break;
+                case "createdat":
+                    query = sortOrder == "asc" ? query.OrderBy(p => p.CreatedAt) : query.OrderByDescending(p => p.CreatedAt);
+                    break;
+                case "roastlevel":
+                    query = sortOrder == "asc" ? query.OrderBy(p => p.RoastLevel) : query.OrderByDescending(p => p.RoastLevel);
+                    break;
+                case "brewmethod":
+                    query = sortOrder == "asc" ? query.OrderBy(p => p.BrewMethod) : query.OrderByDescending(p => p.BrewMethod);
+                    break;
+                default:
+                    query = sortOrder == "asc" ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name);
+                    break;
+            }
+
+            // Include navigation properties before passing to repository
+            query = query.Include(p => p.Variants.Where(v => v.IsActive));
+
+            // Use repository for paging
+            var pagedProducts = await _unitOfWork.Products.GetAllProducts(query, searchParams.PageNumber, searchParams.PageSize);
+
+            // Select only requested fields
+            var selectFields = searchParams.SelectFields;
+
+            var result = pagedProducts.Select(product =>
+            {
+                var response = new ProductResponse
+                {
+                    Id = product.Id
+                };
+
+                // If no select fields specified, populate all fields
+                if (selectFields == null || selectFields.Count == 0)
+                {
+                    response.Name = product.Name;
+                    response.Description = product.Description;
+                    response.ImageUrl = product.ImageUrl;
+                    response.Variants = product.Variants
+                        .Where(v => v.IsActive)
+                        .Select(v => new CoffeeVariantResponse
+                        {
+                            Id = v.Id,
+                            Size = v.Size.ToString(),
+                            BasePrice = v.BasePrice
+                        })
+                        .ToList();
+                }
+                else
+                {
+                    // Always include Id, populate only selected fields
+                    foreach (var field in selectFields)
+                    {
+                        switch (field)
+                        {
+                            case ProductSearchParams.ProductSelectField.Name:
+                                response.Name = product.Name;
+                                break;
+                            case ProductSearchParams.ProductSelectField.Description:
+                                response.Description = product.Description;
+                                break;
+                            case ProductSearchParams.ProductSelectField.Origin:
+                                // Note: Origin is not in ProductResponse, would need to add it if needed
+                                break;
+                            case ProductSearchParams.ProductSelectField.RoastLevel:
+                                // Note: RoastLevel is not in ProductResponse, would need to add it if needed
+                                break;
+                            case ProductSearchParams.ProductSelectField.BrewMethod:
+                                // Note: BrewMethod is not in ProductResponse, would need to add it if needed
+                                break;
+                            case ProductSearchParams.ProductSelectField.ImageUrl:
+                                response.ImageUrl = product.ImageUrl;
+                                break;
+                            case ProductSearchParams.ProductSelectField.IsActive:
+                                // Note: IsActive is not in ProductResponse, would need to add it if needed
+                                break;
+                            case ProductSearchParams.ProductSelectField.CreatedAt:
+                                // Note: CreatedAt is not in ProductResponse, would need to add it if needed
+                                break;
+                            case ProductSearchParams.ProductSelectField.Variants:
+                                response.Variants = product.Variants
+                                    .Where(v => v.IsActive)
+                                    .Select(v => new CoffeeVariantResponse
+                                    {
+                                        Id = v.Id,
+                                        Size = v.Size.ToString(),
+                                        BasePrice = v.BasePrice
+                                    })
+                                    .ToList();
+                                break;
+                        }
+                    }
+                }
+
+                return response;
+            });
+
+            return (result.ToList(), pagedProducts.MetaData);
         }
 
         // get product by id

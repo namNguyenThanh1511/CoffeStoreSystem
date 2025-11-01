@@ -12,6 +12,7 @@ using PRN232.Lab2.CoffeeStore.Repositories.PaymentRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.ProductRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork;
 using PRN232.Lab2.CoffeeStore.Repositories.UserRepository;
+using PRN232.Lab2.CoffeeStore.Services.AddonService;
 using PRN232.Lab2.CoffeeStore.Services.AuthService;
 using PRN232.Lab2.CoffeeStore.Services.CacheService;
 using PRN232.Lab2.CoffeeStore.Services.Configuration;
@@ -55,6 +56,7 @@ namespace PRN232.Lab2.CoffeeStore.API.Extensions
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IAddonService, AddonService>();
 
 
         }

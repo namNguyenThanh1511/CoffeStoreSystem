@@ -23,6 +23,11 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Configurations
                    .WithMany(p => p.OrderDetails)
                    .HasForeignKey(od => od.VariantId)
                    .OnDelete(DeleteBehavior.Restrict);
+            // Thiết lập quan hệ 1 - N với OrderItemAddon
+            builder.HasMany(od => od.OrderItemAddons)
+                   .WithOne(oia => oia.OrderDetail)
+                   .HasForeignKey(oia => oia.OrderDetailId)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -18,6 +18,7 @@
         public Temperature Temperature { get; set; }
         public Sweetness Sweetness { get; set; }
         public MilkType MilkType { get; set; }
+        public ICollection<OrderItemAddon> OrderItemAddons { get; set; } = new List<OrderItemAddon>();
 
 
     }

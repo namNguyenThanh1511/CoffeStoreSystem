@@ -1,4 +1,5 @@
-﻿using PRN232.Lab2.CoffeeStore.Repositories;
+﻿using Microsoft.EntityFrameworkCore;
+using PRN232.Lab2.CoffeeStore.Repositories;
 using PRN232.Lab2.CoffeeStore.Repositories.Entities;
 using PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork;
 using PRN232.Lab2.CoffeeStore.Services.Exceptions;
@@ -13,11 +14,14 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IPaymentService _paymentService;
+
+
         public OrderService(IUnitOfWork unitOfWork, ICurrentUserService currentUserService, IPaymentService paymentService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _paymentService = paymentService;
+
         }
 
         public async Task<(List<OrderPlacingResponse>, MetaData metaData)> GetAllOrders(OrderSearchParams searchParams)
@@ -104,19 +108,19 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     {
                         switch (field)
                         {
-                            case OrderSearchParams.SelectField.OrderDate:
+                            case OrderSearchParams.OrderSelectField.OrderDate:
                                 response.OrderDate = order.OrderDate ?? null;
                                 break;
-                            case OrderSearchParams.SelectField.Status:
+                            case OrderSearchParams.OrderSelectField.Status:
                                 response.Status = order.Status.ToString();
                                 break;
-                            case OrderSearchParams.SelectField.TotalAmount:
+                            case OrderSearchParams.OrderSelectField.TotalAmount:
                                 response.TotalAmount = order.TotalAmount;
                                 break;
-                            case OrderSearchParams.SelectField.Customer:
+                            case OrderSearchParams.OrderSelectField.Customer:
                                 response.CustomerId = order.CustomerId ?? null;
                                 break;
-                            case OrderSearchParams.SelectField.OrderItems:
+                            case OrderSearchParams.OrderSelectField.OrderItems:
                                 response.OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
                                 {
                                     Id = oi.Id,
@@ -144,18 +148,16 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             {
                 throw new UnauthorizedAccessException("Only customers can place orders and admin");
             }
-            // Ensure unique ProductId in OrderItems
-            if (request.OrderItems.Select(oi => oi.ProductId).Distinct().Count() != request.OrderItems.Count)
-            {
-                throw new InvalidOperationException("Each product in the order must be unique.");
-            }
-            if (request.OrderItems.Count == 0)
+
+            if (request.OrderItems == null || request.OrderItems.Count == 0)
             {
                 throw new InvalidOperationException("Order must have at least one item.");
             }
+
             try
             {
                 await _unitOfWork.BeginTransaction();
+
                 var order = new Order
                 {
                     CustomerId = Guid.Parse(userId),
@@ -165,40 +167,92 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                 await _unitOfWork.Orders.AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();  // Save để có order.Id
 
-                var products = new List<Product>();
-                foreach (var item in request.OrderItems)
-                {
-                    var product = await _unitOfWork.Products.FindOneAsync(p => p.Id == item.ProductId)
-                                  ?? throw new NotFoundException($"Product with ID {item.ProductId} not found.");
-                    products.Add(product);
-                }
+                var orderItems = new List<OrderDetail>();
+                decimal totalAmount = 0;
 
-                var orderItems = request.OrderItems.Select(itemReq =>  // Rename để rõ
+                foreach (var itemReq in request.OrderItems)
                 {
-                    var product = products.First(p => p.Id == itemReq.ProductId);
-                    //if (itemReq.Quantity > product.Stock)
-                    //{
-                    //    throw new InvalidOperationException($"Insufficient stock for product {product.Name}. Available: {product.Stock}, Requested: {itemReq.Quantity}");
-                    //}
-                    //product.Stock -= itemReq.Quantity;
-                    _unitOfWork.Products.Update(product);
+                    // Validate and get variant using repository
+                    var variant = await _unitOfWork.CoffeeVariants.GetByIdAsync(
+                        itemReq.VariantId,
+                        q => q.Include(v => v.Product)
+                    ) ?? throw new NotFoundException($"Variant with ID {itemReq.VariantId} not found or not active.");
 
+                    if (!variant.IsActive)
+                    {
+                        throw new InvalidOperationException($"Variant with ID {itemReq.VariantId} is not active.");
+                    }
+
+                    if (variant.Product == null || !variant.Product.IsActive)
+                    {
+                        throw new InvalidOperationException($"Product for variant {itemReq.VariantId} is not active.");
+                    }
+
+                    // Validate addons if provided using repository
+                    var addons = new List<CoffeeAddon>();
+                    if (itemReq.AddonIds != null && itemReq.AddonIds.Any())
+                    {
+                        var allRequestedAddons = await _unitOfWork.CoffeeAddons.FindAsync(
+                            a => itemReq.AddonIds.Contains(a.Id) && a.IsActive
+                        );
+                        addons = allRequestedAddons.ToList();
+
+                        if (addons.Count != itemReq.AddonIds.Count)
+                        {
+                            var foundIds = addons.Select(a => a.Id).ToList();
+                            var missingIds = itemReq.AddonIds.Except(foundIds).ToList();
+                            throw new NotFoundException($"Some addons not found or not active: {string.Join(", ", missingIds)}");
+                        }
+                    }
+
+                    // Calculate unit price (variant base price + addon prices)
+                    var addonTotalPrice = addons.Sum(a => a.Price);
+                    var unitPrice = variant.BasePrice + addonTotalPrice;
+
+                    // Create OrderDetail
                     var orderItem = new OrderDetail
                     {
                         OrderId = order.Id,
-                        //ProductId = product.Id,
+                        VariantId = variant.Id,
                         Quantity = itemReq.Quantity,
-                        //UnitPrice = product.Price
+                        UnitPrice = unitPrice,
+                        Temperature = itemReq.Temperature,
+                        Sweetness = itemReq.Sweetness,
+                        MilkType = itemReq.MilkType,
+                        OrderItemAddons = addons.Select(addon => new OrderItemAddon
+                        {
+                            AddonId = addon.Id,
+                            Price = addon.Price
+                        }).ToList()
                     };
-                    return orderItem;
-                }).ToList();
 
-                order.OrderItems = orderItems;
-                order.TotalAmount = orderItems.Sum(item => item.Quantity * item.UnitPrice);
-                await _unitOfWork.SaveChangesAsync();  // Save OrderItems và TotalAmount
+                    orderItems.Add(orderItem);
+                    totalAmount += unitPrice * itemReq.Quantity;
+                }
+
+                // Save order items
+                await _unitOfWork.OrderDetails.AddRangeAsync(orderItems);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Update order total amount
+                order.TotalAmount = totalAmount;
+                _unitOfWork.Orders.Update(order);
+                await _unitOfWork.SaveChangesAsync();
+
                 await _unitOfWork.CommitTransaction();
 
                 var paymentUrl = await _paymentService.CreatePaymentLink(order);
+
+                // Reload order with all relations for response
+                var orderWithDetails = await _unitOfWork.Orders.GetByIdAsync(order.Id,
+                    q => q.Include(o => o.OrderItems)
+                          .ThenInclude(oi => oi.Variant)
+                          .ThenInclude(v => v.Product));
+
+                if (orderWithDetails == null)
+                {
+                    throw new NotFoundException("Order not found after creation");
+                }
 
                 return (new OrderPlacingResponse
                 {
@@ -206,17 +260,16 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     OrderDate = order.OrderDate,
                     Status = order.Status.ToString(),
                     TotalAmount = order.TotalAmount,
-                    CustomerId = order.CustomerId.Value,
-                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
+                    CustomerId = order.CustomerId ?? Guid.Empty,
+                    OrderItems = orderWithDetails.OrderItems.Select(oi => new OrderItemResponse
                     {
                         Id = oi.Id,
-                        //ProductId = oi.ProductId,
                         Quantity = oi.Quantity,
                         UnitPrice = oi.UnitPrice
                     }).ToList()
                 }, paymentUrl);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransaction();
                 throw;
@@ -230,6 +283,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             {
                 await _unitOfWork.BeginTransaction();
                 order.Status = OrderStatus.COMPLETED;
+                order.PaymentStatus = PaymentStatus.PAID;
                 _unitOfWork.Orders.Update(order);
                 var payment = new Payment
                 {
@@ -239,11 +293,12 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     Method = PaymentMethod.OnlineBanking,
                     Status = PaymentStatus.PAID
                 };
+                await _unitOfWork.Payments.AddAsync(payment);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
                 return true;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransaction();
                 throw;

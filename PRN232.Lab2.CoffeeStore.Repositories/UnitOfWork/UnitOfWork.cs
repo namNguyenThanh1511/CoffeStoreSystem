@@ -1,6 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
 using PRN232.Lab2.CoffeeStore.Repositories.CategoryRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.CoffeeAddonRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.CoffeeVariantRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.MenuRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.OrderDetailRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.PaymentRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.ProductRepository;
@@ -16,6 +19,10 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
 
         public IProductRepository Products { get; private set; }
 
+        public ICoffeeAddonRepository CoffeeAddons { get; private set; }
+
+        public ICoffeeVariantRepository CoffeeVariants { get; private set; }
+
         public IMenuRepository Menus { get; private set; }
 
         public ICategoryRepository Categories { get; private set; }
@@ -24,18 +31,24 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
 
         public IOrderRepository Orders { get; private set; }
 
+        public IOrderDetailRepository OrderDetails { get; private set; }
+
         public IPaymentRepository Payments { get; private set; }
 
-        public UnitOfWork(CoffeStoreDbContext context, IProductRepository productRepository, IMenuRepository menuRepository, ICategoryRepository categoryRepository, IUserRepository userRepository, IOrderRepository orderRepository, IPaymentRepository paymentRepository)
+
+
+        public UnitOfWork(CoffeStoreDbContext context, IProductRepository productRepository, ICoffeeAddonRepository coffeeAddonRepository, ICoffeeVariantRepository coffeeVariantRepository, IMenuRepository menuRepository, ICategoryRepository categoryRepository, IUserRepository userRepository, IOrderRepository orderRepository, IOrderDetailRepository orderDetailRepository, IPaymentRepository paymentRepository)
         {
             _context = context;
             Products = productRepository;
+            CoffeeAddons = coffeeAddonRepository;
+            CoffeeVariants = coffeeVariantRepository;
             Menus = menuRepository;
             Categories = categoryRepository;
             Users = userRepository;
             Orders = orderRepository;
             Payments = paymentRepository;
-
+            OrderDetails = orderDetailRepository;
         }
         public async Task<int> SaveChangesAsync()
         {

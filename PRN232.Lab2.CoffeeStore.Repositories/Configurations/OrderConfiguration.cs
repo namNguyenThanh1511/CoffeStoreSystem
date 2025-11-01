@@ -14,6 +14,8 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.Configurations
             builder.Property(o => o.TotalAmount).HasColumnType("decimal(18,2)").IsRequired();
             builder.Property(o => o.Status).IsRequired();
             builder.Property(o => o.Status).HasConversion<string>();
+            builder.Property(o => o.PaymentStatus).HasConversion<string>();
+            builder.Property(o => o.DeliveryType).HasConversion<string>();
             builder.Property(o => o.CreatedAt).IsRequired();
             // Quan hệ N - 1 với User (Customer)
             builder.HasOne(o => o.Customer)

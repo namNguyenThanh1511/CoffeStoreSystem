@@ -4,9 +4,12 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.ProductRepository
 {
     public class ProductRepository : GenericRepository<Entities.Product>, IProductRepository
     {
-
-
         public ProductRepository(CoffeStoreDbContext context) : base(context) { }
+
+        public async Task<PagedList<Entities.Product>> GetAllProducts(IQueryable<Entities.Product> queryable, int pageNumber, int pageSize)
+        {
+            return await PagedList<Entities.Product>.ToPagedList(queryable, pageNumber, pageSize);
+        }
 
         // Get all products with category
         //public new async Task<IEnumerable<Entities.Product>> GetAllAsync()

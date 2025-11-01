@@ -1,5 +1,8 @@
 ﻿using PRN232.Lab2.CoffeeStore.Repositories.CategoryRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.CoffeeAddonRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.CoffeeVariantRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.MenuRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.OrderDetailRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.PaymentRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.ProductRepository;
@@ -11,6 +14,10 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
     {
         IProductRepository Products { get; }
 
+        ICoffeeAddonRepository CoffeeAddons { get; }
+
+        ICoffeeVariantRepository CoffeeVariants { get; }
+
         IMenuRepository Menus { get; }
 
         ICategoryRepository Categories { get; }
@@ -18,6 +25,8 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
         IUserRepository Users { get; }
 
         IOrderRepository Orders { get; }
+
+        IOrderDetailRepository OrderDetails { get; }
 
         IPaymentRepository Payments { get; }
 

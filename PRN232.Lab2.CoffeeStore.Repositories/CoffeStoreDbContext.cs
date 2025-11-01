@@ -41,6 +41,7 @@ namespace PRN232.Lab2.CoffeeStore.Repositories
         public DbSet<CoffeeVariant> CoffeeVariants { get; set; }
         public DbSet<CoffeeAddon> CoffeeAddons { get; set; }
         public DbSet<CoffeePriceSchedule> CoffeePriceSchedules { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<OrderItemAddon> OrderItemAddons { get; set; }
     }
 }

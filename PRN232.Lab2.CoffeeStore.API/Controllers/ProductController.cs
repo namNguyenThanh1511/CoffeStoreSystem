@@ -17,10 +17,17 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
 
         // GET: api/product
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<ProductResponse>>>> GetAllProducts()
+        public async Task<ActionResult<ApiResponse<List<ProductResponse>>>> GetAllProducts([FromQuery] ProductSearchParams searchParams)
         {
+            var (products, metaData) = await _productService.GetAllProductsAsync(searchParams);
+            // Add pagination metadata to response header
+            Response.Headers.Append("X-Pagination-CurrentPage", metaData.CurrentPage.ToString());
+            Response.Headers.Append("X-Pagination-TotalPages", metaData.TotalPages.ToString());
+            Response.Headers.Append("X-Pagination-PageSize", metaData.PageSize.ToString());
+            Response.Headers.Append("X-Pagination-TotalCount", metaData.TotalCount.ToString());
+            Response.Headers.Append("X-Pagination-HasPrevious", metaData.HasPrevious.ToString());
+            Response.Headers.Append("X-Pagination-HasNext", metaData.HasNext.ToString());
 
-            var products = await _productService.GetAllProductsAsync();
             return Ok(products);
         }
 

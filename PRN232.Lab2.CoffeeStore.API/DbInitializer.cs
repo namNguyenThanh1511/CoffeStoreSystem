@@ -12,6 +12,7 @@ namespace PRN232.Lab2.CoffeeStore.API
             var context = scope.ServiceProvider.GetRequiredService<CoffeStoreDbContext>();
             var hasher = new PasswordHasher<User>();
             await SeedCoffeVariantsAsync(context);
+            await SeedCoffeeAddonsAsync(context);
 
         }
 
@@ -74,6 +75,84 @@ namespace PRN232.Lab2.CoffeeStore.API
             }
 
             await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedCoffeeAddonsAsync(CoffeStoreDbContext context)
+        {
+            // Seed CoffeeAddons if empty
+            if (!context.CoffeeAddons.Any())
+            {
+                var addons = new List<CoffeeAddon>
+                {
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Extra Shot",
+                        Price = 5000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Oat Milk",
+                        Price = 8000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Almond Milk",
+                        Price = 8000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Soy Milk",
+                        Price = 7000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Whipped Cream",
+                        Price = 10000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Caramel Syrup",
+                        Price = 5000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Vanilla Syrup",
+                        Price = 5000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new CoffeeAddon
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Chocolate Syrup",
+                        Price = 5000,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                };
+
+                await context.CoffeeAddons.AddRangeAsync(addons);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }
