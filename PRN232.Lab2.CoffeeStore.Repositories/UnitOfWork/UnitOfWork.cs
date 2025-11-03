@@ -2,6 +2,8 @@
 using PRN232.Lab2.CoffeeStore.Repositories.CategoryRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.CoffeeAddonRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.CoffeeVariantRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.Entities;
+using PRN232.Lab2.CoffeeStore.Repositories.GenericRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.MenuRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderDetailRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderRepository;
@@ -35,6 +37,10 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
 
         public IPaymentRepository Payments { get; private set; }
 
+        public IGenericRepository<Conversation> Conversations { get; private set; }
+        public IGenericRepository<Participant> Participants { get; private set; }
+        public IGenericRepository<Message> Messages { get; private set; }
+
 
 
         public UnitOfWork(CoffeStoreDbContext context, IProductRepository productRepository, ICoffeeAddonRepository coffeeAddonRepository, ICoffeeVariantRepository coffeeVariantRepository, IMenuRepository menuRepository, ICategoryRepository categoryRepository, IUserRepository userRepository, IOrderRepository orderRepository, IOrderDetailRepository orderDetailRepository, IPaymentRepository paymentRepository)
@@ -49,6 +55,9 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
             Orders = orderRepository;
             Payments = paymentRepository;
             OrderDetails = orderDetailRepository;
+            Conversations = new GenericRepository<Conversation>(_context);
+            Participants = new GenericRepository<Participant>(_context);
+            Messages = new GenericRepository<Message>(_context);
         }
         public async Task<int> SaveChangesAsync()
         {

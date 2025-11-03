@@ -1,6 +1,8 @@
 ﻿using PRN232.Lab2.CoffeeStore.Repositories.CategoryRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.CoffeeAddonRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.CoffeeVariantRepository;
+using PRN232.Lab2.CoffeeStore.Repositories.Entities;
+using PRN232.Lab2.CoffeeStore.Repositories.GenericRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.MenuRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderDetailRepository;
 using PRN232.Lab2.CoffeeStore.Repositories.OrderRepository;
@@ -29,6 +31,11 @@ namespace PRN232.Lab2.CoffeeStore.Repositories.UnitOfWork
         IOrderDetailRepository OrderDetails { get; }
 
         IPaymentRepository Payments { get; }
+
+        IGenericRepository<Conversation> Conversations { get; }
+        IGenericRepository<Participant> Participants { get; }
+        IGenericRepository<Message> Messages { get; }
+
 
         Task BeginTransaction();
 

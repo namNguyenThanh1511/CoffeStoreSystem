@@ -15,6 +15,9 @@
         public bool IsRefreshTokenRevoked { get; set; } = false;
         public DateTime? RefreshTokenExpiryTime { get; set; }
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+
+        public ICollection<Participant>? Participants { get; set; }
+        public ICollection<Message>? SentMessages { get; set; }
     }
 
     public enum Role

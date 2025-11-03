@@ -27,6 +27,9 @@ namespace PRN232.Lab2.CoffeeStore.Repositories
             modelBuilder.ApplyConfiguration(new CoffeeAddonConfiguration());
             modelBuilder.ApplyConfiguration(new CoffeePriceScheduleConfiguration());
             modelBuilder.ApplyConfiguration(new OrderItemAddonConfiguration());
+            modelBuilder.ApplyConfiguration(new ConversationConfiguration());
+            modelBuilder.ApplyConfiguration(new ParticipantConfiguration());
+            modelBuilder.ApplyConfiguration(new MessageConfiguration());
         }
 
 
@@ -43,5 +46,8 @@ namespace PRN232.Lab2.CoffeeStore.Repositories
         public DbSet<CoffeePriceSchedule> CoffeePriceSchedules { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<OrderItemAddon> OrderItemAddons { get; set; }
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<Participant> Participants { get; set; }
+        public DbSet<Message> Messages { get; set; }
     }
 }
