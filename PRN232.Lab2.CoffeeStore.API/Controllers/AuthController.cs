@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PRN232.Lab2.CoffeeStore.API.Models;
 using PRN232.Lab2.CoffeeStore.Services.AuthService;
 using PRN232.Lab2.CoffeeStore.Services.Configuration;
+using PRN232.Lab2.CoffeeStore.Services.Models.User;
 using System.Security.Claims;
 
 namespace PRN232.Lab2.CoffeeStore.API.Controllers
@@ -67,6 +68,13 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             return Ok("Đăng xuất thành công");
         }
 
-
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<UserProfileResponse>>> GetUserProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _authService.GetUserProfileAsync(userId);
+            return Ok(result, "Lấy thông tin người dùng thành công");
+        }
     }
 }

@@ -8,6 +8,7 @@ using PRN232.Lab2.CoffeeStore.Services.Constants;
 using PRN232.Lab2.CoffeeStore.Services.Exceptions;
 using PRN232.Lab2.CoffeeStore.Services.Helper;
 using PRN232.Lab2.CoffeeStore.Services.Mapper;
+using PRN232.Lab2.CoffeeStore.Services.Models.User;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
@@ -150,6 +151,23 @@ namespace PRN232.Lab2.CoffeeStore.Services.AuthService
             }
         }
 
+        public async Task<UserProfileResponse> GetUserProfileAsync(string userId)
+        {
+            var userGuid = Guid.Parse(userId);
+            var user = await _unitOfWork.Users.FindOneAsync(u => u.Id == userGuid);
+            if (user == null)
+            {
+                throw new NotFoundException("Người dùng không tồn tại");
+            }
+            return new UserProfileResponse
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Role = user.Role.ToString(),
+            };
 
+        }
     }
 }
