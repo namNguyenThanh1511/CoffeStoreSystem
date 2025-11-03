@@ -29,11 +29,13 @@ namespace PRN232.Lab2.CoffeeStore.Services.ChatService
             await _unitOfWork.Conversations.AddAsync(conversation);
             await _unitOfWork.SaveChangesAsync();
 
+
+
             // Thêm 2 participant
             var participants = new List<Participant>
             {
-                new() { ConversationId = conversation.Id, UserId = request.CustomerId, Role = "CUSTOMER", JoinedAt = DateTime.UtcNow },
-                new() { ConversationId = conversation.Id, UserId = request.StaffId, Role = "STAFF", JoinedAt = DateTime.UtcNow }
+                new() { ConversationId = conversation.Id, UserId = request.CustomerId, Role = Role.Customer.ToString(), JoinedAt = DateTime.UtcNow },
+                new() { ConversationId = conversation.Id, UserId = request.BaristaId, Role = Role.Barista.ToString(), JoinedAt = DateTime.UtcNow }
             };
 
             foreach (var p in participants)
