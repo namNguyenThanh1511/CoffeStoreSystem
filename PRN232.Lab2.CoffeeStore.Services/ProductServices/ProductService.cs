@@ -38,6 +38,21 @@ namespace PRN232.Lab2.CoffeeStore.Services.ProductServices
             {
                 query = query.Where(p => p.IsActive == searchParams.IsActive.Value);
             }
+            // Filter by RoastLevel
+            if (searchParams.RoastLevel.HasValue)
+            {
+                query = query.Where(p => p.RoastLevel == searchParams.RoastLevel.Value);
+            }
+            // Filter by BrewMethod
+            if (searchParams.BrewMethod.HasValue)
+            {
+                query = query.Where(p => p.BrewMethod == searchParams.BrewMethod.Value);
+            }
+            // Filter by Origin
+            if (!string.IsNullOrWhiteSpace(searchParams.Origin))
+            {
+                query = query.Where(p => p.Origin != null && p.Origin.Contains(searchParams.Origin));
+            }
 
             // Sorting
             string sortBy = string.IsNullOrWhiteSpace(searchParams.SortBy) ? "Name" : searchParams.SortBy;
