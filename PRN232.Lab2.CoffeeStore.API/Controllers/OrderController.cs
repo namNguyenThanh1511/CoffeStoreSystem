@@ -59,5 +59,20 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             return Created(result.order, "Đặt hàng thành công");
         }
 
+        [HttpPost("paying")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse>> ProcessPayingOrder([FromBody] OrderPayingRequest request)
+        {
+            var success = await _orderService.ProcessPayingOrder(request);
+            if (success)
+            {
+                return Ok("Xử lý đơn hàng thành công");
+            }
+            else
+            {
+                return BadRequest("Xử lý đơn hàng thất bại");
+            }
+        }
+
     }
 }
