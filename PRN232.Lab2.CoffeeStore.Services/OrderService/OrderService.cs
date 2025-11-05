@@ -42,7 +42,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             }
 
             // Restrict to current user if not admin
-            if (role != Role.Admin.ToString())
+            if (role != Role.Admin.ToString() && role != Role.Barista.ToString())
             {
                 query = query.Where(o => o.CustomerId == Guid.Parse(userId));
             }
@@ -67,7 +67,30 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     break;
             }
 
-
+            //filtering by Statuses
+            if (searchParams.Statuses != null && searchParams.Statuses.Count > 0)
+            {
+                var statusEnums = searchParams.Statuses
+                    .Select(s => Enum.Parse<OrderStatus>(s, true))
+                    .ToList();
+                query = query.Where(o => statusEnums.Contains(o.Status));
+            }
+            //filtering by PaymentStatuses
+            if (searchParams.PaymentStatuses != null && searchParams.PaymentStatuses.Count > 0)
+            {
+                var paymentStatusEnums = searchParams.PaymentStatuses
+                    .Select(s => Enum.Parse<PaymentStatus>(s, true))
+                    .ToList();
+                query = query.Where(o => o.PaymentStatus != null && paymentStatusEnums.Contains(o.PaymentStatus));
+            }
+            //filtering by DeliveryTypes
+            if (searchParams.DeliveryTypes != null && searchParams.DeliveryTypes.Count > 0)
+            {
+                var deliveryTypeEnums = searchParams.DeliveryTypes
+                    .Select(s => Enum.Parse<DeliveryType>(s, true))
+                    .ToList();
+                query = query.Where(o => o.DeliveryType != null && deliveryTypeEnums.Contains(o.DeliveryType));
+            }
 
             // Include navigation properties before passing to repository
             query = query.Include(o => o.OrderItems)
@@ -161,7 +184,6 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
 
             return (result.ToList(), pagedOrders.MetaData);
         }
-
         public async Task<(List<OrderPlacingResponse>, MetaData metaData)> GetOrdersByCurrentUser(OrderSearchParams searchParams)
         {
             (string userId, string role) = _currentUserService.GetCurrentUser();
@@ -207,6 +229,33 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                     query = sortOrder == "asc" ? query.OrderBy(o => o.OrderDate) : query.OrderByDescending(o => o.OrderDate);
                     break;
             }
+
+
+            //filtering by Statuses
+            if (searchParams.Statuses != null && searchParams.Statuses.Count > 0)
+            {
+                var statusEnums = searchParams.Statuses
+                    .Select(s => Enum.Parse<OrderStatus>(s, true))
+                    .ToList();
+                query = query.Where(o => statusEnums.Contains(o.Status));
+            }
+            //filtering by PaymentStatuses
+            if (searchParams.PaymentStatuses != null && searchParams.PaymentStatuses.Count > 0)
+            {
+                var paymentStatusEnums = searchParams.PaymentStatuses
+                    .Select(s => Enum.Parse<PaymentStatus>(s, true))
+                    .ToList();
+                query = query.Where(o => o.PaymentStatus != null && paymentStatusEnums.Contains(o.PaymentStatus));
+            }
+            //filtering by DeliveryTypes
+            if (searchParams.DeliveryTypes != null && searchParams.DeliveryTypes.Count > 0)
+            {
+                var deliveryTypeEnums = searchParams.DeliveryTypes
+                    .Select(s => Enum.Parse<DeliveryType>(s, true))
+                    .ToList();
+                query = query.Where(o => o.DeliveryType != null && deliveryTypeEnums.Contains(o.DeliveryType));
+            }
+
 
             // Include navigation properties before passing to repository
             query = query.Include(o => o.OrderItems)
@@ -466,6 +515,144 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                         }).ToList() ?? new List<CoffeeAddonResponse>()
                     }).ToList()
                 }, paymentUrl);
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task<OrderPlacingResponse> UpdateOrderStatus(OrderStatusUpdateRequest request)
+        {
+            (string userId, string role) = _currentUserService.GetCurrentUser();
+
+            // Get order with all relations
+            var order = await _unitOfWork.Orders.GetByIdAsync(request.OrderId,
+                q => q.Include(o => o.OrderItems)
+                      .ThenInclude(oi => oi.Variant)
+                      .ThenInclude(v => v.Product)
+                      .Include(o => o.OrderItems)
+                      .ThenInclude(oi => oi.OrderItemAddons)
+                      .ThenInclude(oia => oia.Addon)
+                      .Include(o => o.Customer)
+            ) ?? throw new NotFoundException("Order not found");
+
+            var currentStatus = order.Status;
+            var newStatus = request.NewStatus;
+
+            try
+            {
+                await _unitOfWork.BeginTransaction();
+
+                // Validate and update based on role
+                if (role == Role.Barista.ToString() || role == Role.Admin.ToString())
+                {
+                    // Barista/Admin can update:
+                    // 1. PROCESSING -> BREWING (bắt đầu pha chế)
+                    // 2. BREWING -> READY (nếu PICKUP) hoặc DELIVERING (nếu DELIVERY) (hoàn tất pha chế)
+
+                    if (currentStatus == OrderStatus.PROCESSING && newStatus == OrderStatus.BREWING)
+                    {
+                        // Bắt đầu pha chế
+                        order.Status = newStatus;
+                    }
+                    else if (currentStatus == OrderStatus.BREWING)
+                    {
+                        // Hoàn tất pha chế
+                        if (order.DeliveryType == DeliveryType.PICKUP && newStatus == OrderStatus.READY)
+                        {
+                            order.Status = newStatus;
+                        }
+                        else if (order.DeliveryType == DeliveryType.DELIVERY && newStatus == OrderStatus.DELIVERING)
+                        {
+                            order.Status = newStatus;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException(
+                                $"Invalid status transition from BREWING. Expected READY for PICKUP or DELIVERING for DELIVERY, but got {newStatus}."
+                            );
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"Barista can only update status from PROCESSING to BREWING, or from BREWING to READY (PICKUP) or DELIVERING (DELIVERY). Current status: {currentStatus}, Requested: {newStatus}"
+                        );
+                    }
+                }
+                else if (role == Role.Customer.ToString())
+                {
+                    // Customer can update:
+                    // DELIVERING -> COMPLETED (nhận hàng)
+                    // PROCESSING -> CANCELLED (hủy đơn hàng)
+                    // Verify customer owns this order
+                    if (order.CustomerId != Guid.Parse(userId))
+                    {
+                        throw new UnauthorizedAccessException("You can only update your own orders.");
+                    }
+
+                    if (currentStatus == OrderStatus.DELIVERING && newStatus == OrderStatus.COMPLETED)
+                    {
+
+                        order.Status = newStatus;
+                    }
+                    else if (currentStatus == OrderStatus.PROCESSING && newStatus == OrderStatus.CANCELLED)
+                    {
+                        order.Status = newStatus;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"Customer can only update status from DELIVERING to COMPLETED, or from PROCESSING to CANCELLED. Current status: {currentStatus}, Requested: {newStatus}"
+                        );
+                    }
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException("Only Barista, Admin, or Customer can update order status.");
+                }
+
+                // Update UpdatedAt timestamp
+                order.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Orders.Update(order);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // Return updated order as response
+                return new OrderPlacingResponse
+                {
+                    Id = order.Id,
+                    OrderDate = order.OrderDate,
+                    Status = order.Status.ToString(),
+                    TotalAmount = order.TotalAmount,
+                    CustomerId = order.CustomerId ?? Guid.Empty,
+                    OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
+                    {
+                        Id = oi.Id,
+                        ProductsWithVariant = oi.Variant?.Product != null ? new ProductWithVariantResponse
+                        {
+                            ProductId = oi.Variant.Product.Id,
+                            ProductName = oi.Variant.Product.Name,
+                            VariantId = oi.Variant.Id,
+                            VariantSize = oi.Variant.Size.ToString(),
+                            BasePrice = oi.Variant.BasePrice
+                        } : null,
+                        Quantity = oi.Quantity,
+                        UnitPrice = oi.UnitPrice,
+                        Notes = oi.Notes,
+                        Temperature = oi.Temperature.ToString(),
+                        Sweetness = oi.Sweetness.ToString(),
+                        MilkType = oi.MilkType.ToString(),
+                        Addons = oi.OrderItemAddons?.Select(oia => new CoffeeAddonResponse
+                        {
+                            Id = oia.AddonId,
+                            Name = oia.Addon != null ? oia.Addon.Name : "",
+                            Price = oia.Price
+                        }).ToList() ?? new List<CoffeeAddonResponse>()
+                    }).ToList()
+                };
             }
             catch (Exception)
             {

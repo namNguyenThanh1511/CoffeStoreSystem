@@ -29,8 +29,8 @@
     {
         PROCESSING,
         BREWING,
-        READY,
-        DELIVERING,
+        READY,//chờ lấy hàng nếu chọn PICKUP, chờ giao nếu chọn DELIVERY
+        DELIVERING,// chỉ áp dụng khi chọn DELIVERY
         COMPLETED,
         CANCELLED
     }

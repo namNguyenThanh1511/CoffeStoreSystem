@@ -18,8 +18,8 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             _paymentService = paymentService;
         }
 
-        [HttpGet("admin")]
-        [Authorize(Roles = "Admin")]
+        [HttpGet("admin-barista")]
+        [Authorize(Roles = "Admin,Barista")]
         public async Task<ActionResult<ApiResponse<List<OrderPlacingResponse>>>> GetAllOrders([FromQuery] OrderSearchParams searchParams)
         {
             var (orders, metaData) = await _orderService.GetAllOrders(searchParams);
@@ -72,6 +72,14 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             {
                 return BadRequest("Xử lý đơn hàng thất bại");
             }
+        }
+
+        [HttpPut("status")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<OrderPlacingResponse>>> UpdateOrderStatus([FromBody] OrderStatusUpdateRequest request)
+        {
+            var updatedOrder = await _orderService.UpdateOrderStatus(request);
+            return Ok(updatedOrder, "Cập nhật trạng thái đơn hàng thành công");
         }
 
     }

@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using PRN232.Lab2.CoffeeStore.API.Models;
 using PRN232.Lab2.CoffeeStore.Services.ChatService;
 using PRN232.Lab2.CoffeeStore.Services.Models.Chat;
+using PRN232.Lab2.CoffeeStore.Services.UserService;
 
 namespace PRN232.Lab2.CoffeeStore.API.Controllers
 {
@@ -10,16 +12,30 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
     public class ChatController : BaseController
     {
         private readonly IChatService _chatService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public ChatController(IChatService chatService)
+        public ChatController(IChatService chatService, ICurrentUserService currentUserService)
         {
             _chatService = chatService;
+            _currentUserService = currentUserService;
         }
 
         [HttpPost("conversation")]
         public async Task<ActionResult<ApiResponse<ConversationResponse>>> CreateConversation([FromBody] CreateConversationRequest request)
         {
             var result = await _chatService.CreateConversationAsync(request);
+            return Ok(result);
+        }
+
+        [HttpPost("conversation/customer")]
+        [Authorize(Roles = "Customer")]
+        public async Task<ActionResult<ApiResponse<ConversationResponse>>> CreateCustomerConversation()
+        {
+            var request = new CreateCustomerConversationRequest
+            {
+                CustomerId = Guid.Parse(_currentUserService.GetUserId())
+            };
+            var result = await _chatService.GetOrCreateConversationForCustomerAsync(request);
             return Ok(result);
         }
 
@@ -43,5 +59,7 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             var result = await _chatService.SendMessageAsync(request);
             return Ok(result);
         }
+
+
     }
 }
