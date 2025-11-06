@@ -4,6 +4,7 @@ using PRN232.Lab2.CoffeeStore.API.Extensions;
 using PRN232.Lab2.CoffeeStore.API.Middleware;
 using PRN232.Lab2.CoffeeStore.API.Models;
 using PRN232.Lab2.CoffeeStore.Repositories;
+using PRN232.Lab2.CoffeeStore.Services.Hubs;
 using StackExchange.Redis;
 
 namespace PRN232.Lab2.CoffeeStore.API
@@ -99,6 +100,7 @@ namespace PRN232.Lab2.CoffeeStore.API
             app.UseAuthorization();
             app.UseExceptionHandler();
 
+            app.MapHub<ChatHub>("/hubs/chat"); // <--- Đường dẫn websocket
             app.MapControllers();
 
             app.Run();
