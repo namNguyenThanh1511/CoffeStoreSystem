@@ -127,7 +127,18 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
                                $"orderCode={payos.OrderCode}&" +
                                $"cancel={payos.Cancel.ToString().ToLower()}";
 
-                return Redirect(deepLink);
+                return Content($@"<html>
+                                        <head>
+                                         <meta http-equiv='refresh' content='0;url={deepLink}' />
+                                        </head>
+                                        <body>
+                                            <h2>Thanh toán thành công 🎉</h2>
+                                            <p>Đang quay lại ứng dụng...</p>
+                                        <script>window.location.href='{deepLink}';</script>
+
+                                        </body>
+                                  </html>",
+                                  "text/html;charset=utf-8");
             }
             catch (Exception ex)
             {
