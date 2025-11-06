@@ -142,7 +142,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                         {
                             Id = oia.AddonId,
                             Name = oia.Addon != null ? oia.Addon.Name : "",
-                            Price = oia.Price
+                            Price = oia.Price,
+                            IsActive = oia.Addon != null ? oia.Addon.IsActive : false
                         }).ToList() ?? new List<CoffeeAddonResponse>()
                     }).ToList();
                 }
@@ -307,7 +308,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
                         {
                             Id = oia.AddonId,
                             Name = oia.Addon != null ? oia.Addon.Name : "",
-                            Price = oia.Price
+                            Price = oia.Price,
+                            IsActive = oia.Addon != null ? oia.Addon.IsActive : false
                         }).ToList() ?? new List<CoffeeAddonResponse>()
                     }).ToList();
                 }
@@ -368,9 +370,48 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
 
         public async Task<OrderPlacingResponse> GetOrderById(int orderId)
         {
-
-            throw new NotImplementedException();
-
+            var order = await _unitOfWork.Orders.GetByIdAsync(orderId,
+                q => q.Include(o => o.OrderItems)
+                      .ThenInclude(oi => oi.Variant)
+                      .ThenInclude(v => v.Product)
+                      .Include(o => o.OrderItems)
+                      .ThenInclude(oi => oi.OrderItemAddons)
+                      .ThenInclude(oia => oia.Addon)
+                      .Include(o => o.Customer)
+            ) ?? throw new NotFoundException("Order not found");
+            return new OrderPlacingResponse
+            {
+                Id = order.Id,
+                OrderDate = order.OrderDate,
+                Status = order.Status.ToString(),
+                TotalAmount = order.TotalAmount,
+                CustomerId = order.CustomerId ?? Guid.Empty,
+                OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
+                {
+                    Id = oi.Id,
+                    ProductsWithVariant = oi.Variant?.Product != null ? new ProductWithVariantResponse
+                    {
+                        ProductId = oi.Variant.Product.Id,
+                        ProductName = oi.Variant.Product.Name,
+                        VariantId = oi.Variant.Id,
+                        VariantSize = oi.Variant.Size.ToString(),
+                        BasePrice = oi.Variant.BasePrice
+                    } : null,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice,
+                    Notes = oi.Notes,
+                    Temperature = oi.Temperature.ToString(),
+                    Sweetness = oi.Sweetness.ToString(),
+                    MilkType = oi.MilkType.ToString(),
+                    Addons = oi.OrderItemAddons?.Select(oia => new CoffeeAddonResponse
+                    {
+                        Id = oia.AddonId,
+                        Name = oia.Addon != null ? oia.Addon.Name : "",
+                        Price = oia.Price,
+                        IsActive = oia.Addon != null ? oia.Addon.IsActive : false
+                    }).ToList() ?? new List<CoffeeAddonResponse>()
+                }).ToList()
+            };
         }
 
         public async Task<(OrderPlacingResponse order, string paymentUrl)> PlaceOrder(OrderPlacingRequest request)

@@ -50,6 +50,14 @@ namespace PRN232.Lab2.CoffeeStore.API.Controllers
             return Ok(orders);
         }
 
+        [HttpGet("{orderId}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<OrderPlacingResponse>>> GetOrderById([FromRoute] int orderId)
+        {
+            var order = await _orderService.GetOrderById(orderId);
+            return Ok(order);
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<ActionResult<ApiResponse<OrderPlacingResponse>>> CreateOrder([FromBody] OrderPlacingRequest request)
