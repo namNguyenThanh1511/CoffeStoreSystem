@@ -2,6 +2,6 @@
 {
     public class OrderPayingRequest
     {
-        public long OrderId { get; set; }
+        public long OrderCode { get; set; }
     }
 }

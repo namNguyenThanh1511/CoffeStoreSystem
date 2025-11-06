@@ -366,6 +366,13 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             return (result.ToList(), pagedOrders.MetaData);
         }
 
+        public async Task<OrderPlacingResponse> GetOrderById(int orderId)
+        {
+
+            throw new NotImplementedException();
+
+        }
+
         public async Task<(OrderPlacingResponse order, string paymentUrl)> PlaceOrder(OrderPlacingRequest request)
         {
             (string userId, string role) = _currentUserService.GetCurrentUser();
@@ -663,7 +670,8 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
 
         public async Task<bool> ProcessPayingOrder(OrderPayingRequest request)
         {
-            var order = await _unitOfWork.Orders.GetByIdAsync(request.OrderId) ?? throw new NotFoundException("Order not found");
+            var order = await _unitOfWork.Orders.FindOneAsync(o => o.OrderCode == request.OrderCode)
+                ?? throw new NotFoundException("Order not found");
             try
             {
                 await _unitOfWork.BeginTransaction();
@@ -690,5 +698,7 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
             }
 
         }
+
+
     }
 }

@@ -9,6 +9,9 @@ namespace PRN232.Lab2.CoffeeStore.Services.OrderService
 
         Task<(List<OrderPlacingResponse>, MetaData metaData)> GetAllOrders(OrderSearchParams searchParams);
         Task<(List<OrderPlacingResponse>, MetaData metaData)> GetOrdersByCurrentUser(OrderSearchParams searchParams);
+
+        Task<OrderPlacingResponse> GetOrderById(int orderId);
+
         Task<bool> ProcessPayingOrder(OrderPayingRequest request);
         Task<OrderPlacingResponse> UpdateOrderStatus(OrderStatusUpdateRequest request);
 
