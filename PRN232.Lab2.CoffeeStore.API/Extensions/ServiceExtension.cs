@@ -36,6 +36,8 @@ namespace PRN232.Lab2.CoffeeStore.API.Extensions
         public static void AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHttpContextAccessor();
+
+            services.AddSignalR();
             services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
             // ✅ Register repositories first
             services.AddScoped<IRedisService, RedisService>();
